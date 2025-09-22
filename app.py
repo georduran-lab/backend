@@ -128,7 +128,7 @@ def index():
         url = clean_url(request.form.get("url"))
         try:
             yt = YouTube(url)
-            duration = format_duration(yt.length)
+            duration = format_duration(yt.length or 0)
 
             # 🎥 Buscar siempre 1080p con el fps más alto disponible
             video_stream = (
