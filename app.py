@@ -20,10 +20,9 @@ import requests
 import tempfile
 from flask_cors import CORS
 
-CORS(app)
 app = Flask(__name__)
 app.secret_key = "supersecretkey"
-
+CORS(app)
 
 phrases = [
     "🚀 ¡Al infinito y más allá! – Buzz Lightyear (Toy Story)",
