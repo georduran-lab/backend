@@ -161,16 +161,18 @@ def index():
             video_info = {
                 "title": yt.title,
                 "author": yt.author,
-                "views": format_views(yt.views),
-                "length": duration,
+                "views": format_views(getattr(yt, "views", 0) or 0),
+                "length": getattr(yt, "length", 0) or 0,
                 "thumbnail": yt.thumbnail_url,
                 "url": url,
                 "publish_date": yt.publish_date.strftime("%d/%m/%Y") if getattr(yt, "publish_date", None) else "",
                 "video_quality": video_quality,
-                "video_size": video_size,
-                "audio_quality": audio_quality,
-                "audio_size": audio_size
+                "fps": fps,
+                "video_size": format_size(video_size_bytes),
+                "audio_quality": getattr(audio_stream, "abr", "unknown"),
+                "audio_size": format_size(audio_size_bytes)
             }
+
 
         except Exception as e:
             video_info = {"error": f"No se pudo obtener la información: {e}"}
