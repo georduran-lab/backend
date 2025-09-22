@@ -188,21 +188,21 @@ def index():
                 audio_size_bytes = getattr(audio_stream, "filesize", 0) or 0
                 audio_size = format_size(audio_size_bytes)
         
-            # ✅ Armar el diccionario final
-            video_info = {
-                "title": yt.title,
-                "author": yt.author,
-                "views": format_views(getattr(yt, "views", 0) or 0),
-                "length": getattr(yt, "length", 0) or 0,
-                "thumbnail": yt.thumbnail_url,
-                "url": url,
-                "publish_date": yt.publish_date.strftime("%d/%m/%Y") if getattr(yt, "publish_date", None) else "",
-                "video_quality": video_quality,
-                "fps": fps,
-                "video_size": video_size,
-                "audio_quality": audio_quality,
-                "audio_size": audio_size
-            }
+                # ✅ Armar el diccionario final
+                video_info = {
+                    "title": yt.title,
+                    "author": yt.author,
+                    "views": format_views(getattr(yt, "views", 0) or 0),
+                    "length": getattr(yt, "length", 0) or 0,
+                    "thumbnail": yt.thumbnail_url,
+                    "url": url,
+                    "publish_date": yt.publish_date.strftime("%d/%m/%Y") if getattr(yt, "publish_date", None) else "",
+                    "video_quality": video_quality,
+                    "fps": fps,
+                    "video_size": video_size,
+                    "audio_quality": audio_quality,
+                    "audio_size": audio_size
+                }
         
         except Exception as e:
             # ✅ En caso de error, nunca rompe la app
