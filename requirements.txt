@@ -1,3 +1,6 @@
 flask
+pytubefix
+mutagen
+ffmpeg-python
+requests
 gunicorn
-pytube
