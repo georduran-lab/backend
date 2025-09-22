@@ -140,6 +140,40 @@ def index():
             audio_quality = "unknown"
             audio_size_bytes = 0
             audio_size = "0 MB"
+
+            # ==========================
+            # 🎥 INFO VIDEO (MP4)
+            # ==========================
+            if video_stream:
+                # Resolución (ej: "1080p")
+                resolution = getattr(video_stream, "resolution", "N/A")
+    
+                # FPS (ej: 30, 60) – si no está, 0
+                fps = getattr(video_stream, "fps", 0) or 0
+    
+                # Calidad combinada
+                video_quality = f"{resolution}{fps if fps else ''}"
+    
+                # Tamaño del archivo (si falla, calcular por bitrate aproximado)
+                video_size_bytes = getattr(video_stream, "filesize", 0) or 0
+                if video_size_bytes == 0 and hasattr(video_stream, "bitrate"):
+                    video_size_bytes = int(video_stream.bitrate / 8 * yt.length)
+    
+                video_size = format_size(video_size_bytes)
+
+                # ==========================
+                # 🎵 INFO AUDIO (MP3)
+                # ==========================
+                if audio_stream:
+                    # Calidad de audio (ej: "128kbps")
+                    audio_quality = getattr(audio_stream, "abr", "unknown")
+        
+                    # Tamaño del archivo
+                    audio_size_bytes = getattr(audio_stream, "filesize", 0) or 0
+                    if audio_size_bytes == 0 and hasattr(audio_stream, "bitrate"):
+                        audio_size_bytes = int(audio_stream.bitrate / 8 * yt.length)
+        
+                    audio_size = format_size(audio_size_bytes)
         
             # ✅ Si hay streams válidos, actualiza con info real
             if video_stream and audio_stream:
