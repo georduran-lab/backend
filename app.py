@@ -291,6 +291,7 @@ def _download_task_mp4(task_id, url):
         except Exception:
             pass
 
+        return send_file(output_path, as_attachment=True, download_name=filename)
         q.put({"status": "finished", "message": f"✅ Descargado: {output_path}", "output_path": output_path})
 
     except Exception as e:
@@ -364,6 +365,7 @@ def _download_task_mp3(task_id, url):
             pass
 
         q.put({"status": "finished", "message": f"🎵 Audio listo con carátula: {output_mp3}", "output_path": output_mp3})
+        return send_file(output_mp3, as_attachment=True, download_name=filename)
 
     except Exception as e:
         q.put({"status": "error", "message": f"❌ Error: {e}"})
