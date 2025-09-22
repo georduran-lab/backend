@@ -18,11 +18,9 @@ from mutagen.id3 import ID3, APIC, error
 import ffmpeg
 import requests
 import tempfile
-from flask_cors import CORS
 
 app = Flask(__name__)
 app.secret_key = "supersecretkey"
-CORS(app)
 
 phrases = [
     "🚀 ¡Al infinito y más allá! – Buzz Lightyear (Toy Story)",
