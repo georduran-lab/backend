@@ -235,9 +235,9 @@ def _download_task_mp4(task_id, url):
         video_stream = yt.streams.filter(adaptive=True, type="video").order_by("resolution").desc().first()
         audio_stream = yt.streams.filter(adaptive=True, type="audio").order_by("abr").desc().first()
 
-        v_size = video_stream.filesize or 0
-        a_size = audio_stream.filesize or 0
-        total = v_size + a_size
+        video_size = video_stream.filesize or 0
+        audio_size = audio_stream.filesize or 0
+        total = video_size + audio_size
         # map para ir guardando lo descargado por stream itag
         progress_map = {str(video_stream.itag): 0, str(audio_stream.itag): 0}
         tasks[task_id]['progress_map'] = progress_map
