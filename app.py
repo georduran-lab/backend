@@ -17,10 +17,10 @@ from mutagen.mp3 import MP3
 from mutagen.id3 import ID3, APIC, error
 import ffmpeg
 import requests
-import tempfile
 
 app = Flask(__name__)
 app.secret_key = "supersecretkey"
+
 
 phrases = [
     "🚀 ¡Al infinito y más allá! – Buzz Lightyear (Toy Story)",
@@ -112,7 +112,9 @@ def format_duration(seconds: int) -> str:
 # -------------------------
 # Tareas y colas de progreso (global)
 # -------------------------
+
 tasks = {}  # task_id -> {'queue': Queue(), 'progress_map': {...}, 'total': int}
+
 # -------------------------
 # Rutas principales
 # -------------------------
@@ -126,7 +128,7 @@ def index():
         url = clean_url(request.form.get("url"))
         try:
             yt = YouTube(url)
-            duration = format_duration(yt.length or 0)
+            duration = format_duration(yt.length)
 
             # 🎥 Buscar siempre 1080p con el fps más alto disponible
             video_stream = (
@@ -178,7 +180,6 @@ def index():
 # -------------------------
 # Iniciar descarga: endpoints que lanzan hilo en background y devuelven task_id
 # -------------------------
-
 @app.route("/start_download_mp4", methods=["POST"])
 def start_download_mp4():
     url = clean_url(request.form.get("url"))
@@ -224,7 +225,6 @@ def progress(task_id):
 # -------------------------
 # Funciones internas de descarga (ejecutadas en thread)
 # -------------------------
-
 def _download_task_mp4(task_id, url):
     q = tasks[task_id]['queue']
     try:
@@ -370,10 +370,10 @@ def _download_task_mp3(task_id, url):
     except Exception as e:
         q.put({"status": "error", "message": f"❌ Error: {e}"})
 
-# -------------------------
-# Nueva ruta: devolver calidades disponibles 
-# -------------------------
 
+# -------------------------
+# Nueva ruta: devolver calidades disponibles
+# -------------------------
 @app.route("/get_streams", methods=["POST"])
 def get_streams():
     url = clean_url(request.json.get("url"))
@@ -484,6 +484,7 @@ def download_mp3():
     file_path = os.path.join(DOWNLOADS_PATH, yt.title + ".mp3")
     stream.download(output_path=DOWNLOADS_PATH, filename=os.path.basename(file_path))
     return jsonify({"success": True, "file": file_path})
+
 
 # -------------------------
 # Ejecutar app
