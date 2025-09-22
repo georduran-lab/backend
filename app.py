@@ -114,6 +114,10 @@ def format_duration(seconds: int) -> str:
 # -------------------------
 tasks = {}  # task_id -> {'queue': Queue(), 'progress_map': {...}, 'total': int}
 
+@app.route("/ping")
+def ping():
+    return {"status": "ok", "msg": "backend conectado ✅"}
+
 # -------------------------
 # Rutas principales
 # -------------------------
