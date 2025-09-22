@@ -484,6 +484,31 @@ def download_mp3():
     return jsonify({"success": True, "file": file_path})
 
 
+@app.route("/download/<video_id>/<format>")
+def download(video_id, format):
+    try:
+        # Aquí generas el archivo temporal (ejemplo: mp3 o mp4)
+        filename = f"{video_id}.{format}"
+        filepath = os.path.join("/tmp", filename)  # carpeta temporal en Koyeb
+
+        # 👇 Descargas con pytubefix y guardas en /tmp
+        if format == "mp3":
+            stream = yt.streams.filter(only_audio=True).first()
+            stream.download(output_path="/tmp", filename=filename)
+        else:
+            stream = yt.streams.get_highest_resolution()
+            stream.download(output_path="/tmp", filename=filename)
+
+        # 📥 Devolver al usuario como descarga local
+        return send_file(
+            filepath,
+            as_attachment=True,
+            download_name=filename
+        )
+    except Exception as e:
+        return f"Error: {e}", 500
+
+
 # -------------------------
 # Ejecutar app
 # -------------------------
