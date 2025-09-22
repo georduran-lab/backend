@@ -4,4 +4,3 @@ mutagen
 ffmpeg-python
 requests
 gunicorn
-flask-cors
