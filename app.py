@@ -130,99 +130,47 @@ def index():
             yt = YouTube(url)
             duration = format_duration(yt.length)
 
-        
-            # ✅ Valores seguros por defecto
-            fps = 0
-            resolution = "N/A"
-            video_quality = "unknown"
-            video_size_bytes = 0
-            video_size = "0 MB"
-            audio_quality = "unknown"
-            audio_size_bytes = 0
-            audio_size = "0 MB"
+            # 🎥 Buscar siempre 1080p con el fps más alto disponible
+            video_stream = (
+                yt.streams.filter(adaptive=True, type="video", file_extension="mp4", res="1080p")
+                .order_by("fps")
+                .desc()
+                .first()
+            )
 
-            # ==========================
-            # 🎥 INFO VIDEO (MP4)
-            # ==========================
+            audio_stream = (
+                yt.streams.filter(adaptive=True, type="audio")
+                .order_by("abr")
+                .desc()
+                .first()
+            )
+
+            best_audio = yt.streams.filter(only_audio=True).order_by("abr").desc().first()
+
             if video_stream:
-                # Resolución (ej: "1080p")
-                resolution = getattr(video_stream, "resolution", "N/A")
-    
-                # FPS (ej: 30, 60) – si no está, 0
-                fps = getattr(video_stream, "fps", 0) or 0
-    
-                # Calidad combinada
-                video_quality = f"{resolution}{fps if fps else ''}"
-    
-                # Tamaño del archivo (si falla, calcular por bitrate aproximado)
-                video_size_bytes = getattr(video_stream, "filesize", 0) or 0
-                if video_size_bytes == 0 and hasattr(video_stream, "bitrate"):
-                    video_size_bytes = int(video_stream.bitrate / 8 * yt.length)
-    
-                video_size = format_size(video_size_bytes)
+                fps = getattr(video_stream, "fps", 0)
+                video_quality = f"1080p {fps}fps"
+                video_size = format_size((video_stream.filesize or 0) + (audio_stream.filesize or 0))
+            else:
+                video_quality = "No disponible en 1080p"
+                video_size = "N/A"
 
-                # ==========================
-                # 🎵 INFO AUDIO (MP3)
-                # ==========================
-                if audio_stream:
-                    # Calidad de audio (ej: "128kbps")
-                    audio_quality = getattr(audio_stream, "abr", "unknown")
-        
-                    # Tamaño del archivo
-                    audio_size_bytes = getattr(audio_stream, "filesize", 0) or 0
-                    if audio_size_bytes == 0 and hasattr(audio_stream, "bitrate"):
-                        audio_size_bytes = int(audio_stream.bitrate / 8 * yt.length)
-        
-                    audio_size = format_size(audio_size_bytes)
-        
-            # ✅ Si hay streams válidos, actualiza con info real
-            if video_stream and audio_stream:
-                fps = getattr(video_stream, "fps", 0) or 0
-                resolution = getattr(video_stream, "resolution", "N/A")
-                video_quality = f"{resolution}{fps if fps else ''}"
-        
-                video_size_bytes = (getattr(video_stream, "filesize", 0) or 0) + (getattr(audio_stream, "filesize", 0) or 0)
-                video_size = format_size(video_size_bytes)
-        
-                audio_quality = getattr(audio_stream, "abr", "unknown")
-                audio_size_bytes = getattr(audio_stream, "filesize", 0) or 0
-                audio_size = format_size(audio_size_bytes)
-        
-                # ✅ Armar el diccionario final
-                video_info = {
-                    "title": yt.title,
-                    "author": yt.author,
-                    "views": format_views(getattr(yt, "views", 0) or 0),
-                    "length": getattr(yt, "length", 0) or 0,
-                    "thumbnail": yt.thumbnail_url,
-                    "url": url,
-                    "publish_date": yt.publish_date.strftime("%d/%m/%Y") if getattr(yt, "publish_date", None) else "",
-                    "video_quality": video_quality,
-                    "fps": fps,
-                    "video_size": video_size,
-                    "audio_quality": audio_quality,
-                    "audio_size": audio_size
-                }
-        
-        except Exception as e:
-            # ✅ En caso de error, nunca rompe la app
+            audio_quality = getattr(best_audio, "abr", "unknown")
+            audio_size = format_size(best_audio.filesize or 0)
+
             video_info = {
-                "title": getattr(yt, "title", "Desconocido"),
-                "author": getattr(yt, "author", "Desconocido"),
-                "views": format_views(getattr(yt, "views", 0) or 0),
-                "length": getattr(yt, "length", 0) or 0,
-                "thumbnail": getattr(yt, "thumbnail_url", ""),
+                "title": yt.title,
+                "author": yt.author,
+                "views": format_views(yt.views),
+                "length": duration,
+                "thumbnail": yt.thumbnail_url,
                 "url": url,
                 "publish_date": yt.publish_date.strftime("%d/%m/%Y") if getattr(yt, "publish_date", None) else "",
-                "video_quality": "unknown",
-                "fps": 0,
-                "video_size": "0 MB",
-                "audio_quality": "unknown",
-                "audio_size": "0 MB"
+                "video_quality": video_quality,
+                "video_size": video_size,
+                "audio_quality": audio_quality,
+                "audio_size": audio_size
             }
-            print(f"⚠️ Error obteniendo información: {e}")
-
-
 
         except Exception as e:
             video_info = {"error": f"No se pudo obtener la información: {e}"}
@@ -285,9 +233,9 @@ def _download_task_mp4(task_id, url):
         video_stream = yt.streams.filter(adaptive=True, type="video").order_by("resolution").desc().first()
         audio_stream = yt.streams.filter(adaptive=True, type="audio").order_by("abr").desc().first()
 
-        video_size = video_stream.filesize or 0
-        audio_size = audio_stream.filesize or 0
-        total = video_size + audio_size
+        v_size = video_stream.filesize or 0
+        a_size = audio_stream.filesize or 0
+        total = v_size + a_size
         # map para ir guardando lo descargado por stream itag
         progress_map = {str(video_stream.itag): 0, str(audio_stream.itag): 0}
         tasks[task_id]['progress_map'] = progress_map
@@ -544,4 +492,3 @@ def download_mp3():
 if __name__ == "__main__":
     print("📂 Carpeta de descargas usada:", DOWNLOADS_PATH)
     app.run(host="0.0.0.0", port=5000, debug=True)
-
