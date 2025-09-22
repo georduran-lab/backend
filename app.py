@@ -181,76 +181,29 @@ def index():
 # Iniciar descarga: endpoints que lanzan hilo en background y devuelven task_id
 # -------------------------
 
-# ----------------- MP4 -----------------
-
 @app.route("/start_download_mp4", methods=["POST"])
 def start_download_mp4():
     url = clean_url(request.form.get("url"))
     if not url:
         return jsonify({"error": "URL vacía"}), 400
-
-    try:
-        yt = YouTube(url)
-        video_stream = yt.streams.filter(progressive=True, file_extension="mp4").order_by("resolution").desc().first()
-        
-        if not video_stream:
-            return jsonify({"error": "No se encontró un stream válido"}), 404
-
-        # Carpeta temporal
-        tmp_dir = tempfile.gettempdir()
-        filename = f"{yt.title}.mp4".replace(" ", "_")
-        filepath = os.path.join(tmp_dir, filename)
-
-        # Descargar en tmp
-        video_stream.download(output_path=tmp_dir, filename=filename)
-
-        # Devolver al navegador
-        return send_file(filepath, as_attachment=True, download_name=filename)
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-
-# ----------------- MP3 -----------------
+    task_id = uuid.uuid4().hex
+    q = queue.Queue()
+    tasks[task_id] = {'queue': q}
+    thread = threading.Thread(target=_download_task_mp4, args=(task_id, url), daemon=True)
+    thread.start()
+    return jsonify({"task_id": task_id}), 202 #ESTA FUNCIONA
 
 @app.route("/start_download_mp3", methods=["POST"])
 def start_download_mp3():
     url = clean_url(request.form.get("url"))
     if not url:
         return jsonify({"error": "URL vacía"}), 400
-
-    try:
-        yt = YouTube(url)
-        audio_stream = yt.streams.filter(only_audio=True).order_by("abr").desc().first()
-
-        if not audio_stream:
-            return jsonify({"error": "No se encontró un stream de audio válido"}), 404
-
-        # Carpeta temporal
-        tmp_dir = tempfile.gettempdir()
-        filename_mp4 = f"{yt.title}.mp4".replace(" ", "_")
-        filepath_mp4 = os.path.join(tmp_dir, filename_mp4)
-
-        # Descargar audio en mp4 (contenedor original)
-        audio_stream.download(output_path=tmp_dir, filename=filename_mp4)
-
-        # Convertir a mp3 usando ffmpeg
-        filename_mp3 = f"{yt.title}.mp3".replace(" ", "_")
-        filepath_mp3 = os.path.join(tmp_dir, filename_mp3)
-
-        (
-            ffmpeg
-            .input(filepath_mp4)
-            .output(filepath_mp3, format="mp3", audio_bitrate="192k", vn=None)
-            .overwrite_output()
-            .run(quiet=True)
-        )
-
-        # Devolver al navegador
-        return send_file(filepath_mp3, as_attachment=True, download_name=filename_mp3)
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    task_id = uuid.uuid4().hex
+    q = queue.Queue()
+    tasks[task_id] = {'queue': q}
+    thread = threading.Thread(target=_download_task_mp3, args=(task_id, url), daemon=True)
+    thread.start()
+    return jsonify({"task_id": task_id}), 202 #ESTA FUNCIONA
 
 # -------------------------
 # SSE: stream de progreso
