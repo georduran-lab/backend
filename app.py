@@ -373,6 +373,7 @@ def _download_task_mp3(task_id, url):
 # -------------------------
 # Nueva ruta: devolver calidades disponibles 
 # -------------------------
+
 @app.route("/get_streams", methods=["POST"])
 def get_streams():
     url = clean_url(request.json.get("url"))
@@ -451,21 +452,27 @@ def download_mp4():
     url = clean_url(request.json["url"])
     itag = request.json["itag"]
     yt = YouTube(url)
+
+    # 🎥 + 🎵 Progresivos (para que al menos haya 1 "directo" con audio)
+    progressive = yt.streams.filter(progressive=True, file_extension="mp4").order_by("resolution").desc()
+
+    result = []
+
+    # ✅ Progresivos (video+audio)
+    for s in yt.streams.filter(progressive=True, file_extension="mp4").order_by("resolution").desc():
+            result.append({
+                "itag": s.itag,
+                "type": "progressive",
+                "resolution": s.resolution,
+                "fps": getattr(s, "fps", None),
+                "size": format_size(s.filesize or 0)
+            })
+    
+
     stream = yt.streams.get_by_itag(itag)
-
-    filename = yt.title.replace(" ", "_").replace("/", "_") + ".mp4"
-    filepath = os.path.join("/tmp", filename)
-    stream.download(output_path="/tmp", filename=filename)
-
-    @after_this_request
-    def cleanup(response):
-        try:
-            os.remove(filepath)
-        except:
-            pass
-        return response
-
-    return send_file(filepath, as_attachment=True, download_name=filename)
+    file_path = os.path.join(DOWNLOADS_PATH, yt.title + ".mp4")
+    stream.download(output_path=DOWNLOADS_PATH, filename=os.path.basename(file_path))
+    return jsonify({"success": True, "file": file_path})
 
 
 @app.route("/download_mp3", methods=["POST"])
@@ -474,50 +481,9 @@ def download_mp3():
     itag = request.json["itag"]
     yt = YouTube(url)
     stream = yt.streams.get_by_itag(itag)
-
-    filename = yt.title.replace(" ", "_").replace("/", "_") + ".mp3"
-    filepath = os.path.join("/tmp", filename)
-    stream.download(output_path="/tmp", filename=filename)
-
-    @after_this_request
-    def cleanup(response):
-        try:
-            os.remove(filepath)
-        except:
-            pass
-        return response
-
-    return send_file(filepath, as_attachment=True, download_name=filename)
-
-
-@app.route("/download/<video_id>/<format>")
-def download(video_id, format):
-    try:
-        yt = YouTube(f"https://www.youtube.com/watch?v={video_id}")
-
-        filename = f"{yt.title.replace(' ', '_').replace('/', '_')}.{format}"
-        filepath = os.path.join("/tmp", filename)
-
-        if format == "mp3":
-            stream = yt.streams.filter(only_audio=True).first()
-        else:
-            stream = yt.streams.get_highest_resolution()
-
-        stream.download(output_path="/tmp", filename=filename)
-
-        @after_this_request
-        def cleanup(response):
-            try:
-                os.remove(filepath)
-            except:
-                pass
-            return response
-
-        return send_file(filepath, as_attachment=True, download_name=filename)
-
-    except Exception as e:
-        return f"Error: {e}", 500
-
+    file_path = os.path.join(DOWNLOADS_PATH, yt.title + ".mp3")
+    stream.download(output_path=DOWNLOADS_PATH, filename=os.path.basename(file_path))
+    return jsonify({"success": True, "file": file_path})
 
 # -------------------------
 # Ejecutar app
