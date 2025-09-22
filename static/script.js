@@ -14,88 +14,100 @@ function showOverlay(){
     document.getElementById('percent-text').textContent = pct + '%';
   }
 
-  async function startDownload(kind){
-    const videoUrl = document.getElementById('video_url')?.value || document.getElementById('url_input')?.value;
-    if(!videoUrl){
-      alert('Pega primero la URL y pulsa "Obtener información" o escribe la URL.');
-      return;
-    }
-    const endpoint = kind === 'mp4' ? '/start_download_mp4' : '/start_download_mp3';
-    try{
-      const body = new URLSearchParams({url: videoUrl});
-      const res = await fetch(endpoint, { method: 'POST', body: body });
-      if(!res.ok){
-        const err = await res.json().catch(()=>({error:'error'}));
-        alert('Error al iniciar: ' + (err.error || 'Status ' + res.status));
-        return;
-      }
-      const data = await res.json();
-      const taskId = data.task_id;
-      showOverlay();
-
-      const es = new EventSource('/progress/' + taskId);
-      es.onmessage = function(evt){
+  // 🔧 URL base del backend en Koyeb
+    const BACKEND_URL = "necessary-elenore-georduran-f0fec885.koyeb.app/";
+    
+    async function startDownload(kind){
+        const videoUrl = document.getElementById('video_url')?.value || document.getElementById('url_input')?.value;
+        if(!videoUrl){
+          alert('Pega primero la URL y pulsa "Obtener información" o escribe la URL.');
+          return;
+        }
+    
+        // usamos la URL del backend
+        const endpoint = kind === 'mp4' 
+          ? `${BACKEND_URL}/start_download_mp4` 
+          : `${BACKEND_URL}/start_download_mp3`;
+    
         try{
-          const msg = JSON.parse(evt.data);
-          if(msg.status === 'downloading'){
-            setProgress(msg.percent || 0);
-            document.getElementById('status-text').textContent = `Descargando... ${msg.percent || 0}%`;
-          } else if(msg.status === 'started'){
-            document.getElementById('status-text').textContent = msg.message || 'Iniciando...';
-          } else if(msg.status === 'info'){
-            document.getElementById('status-text').textContent = msg.message || '';
-          } else if(msg.status === 'merging'){
-            setProgress(100);
-            document.getElementById('status-text').textContent = msg.message || 'Uniendo...';
-          } else if(msg.status === 'finished'){
-            setProgress(100);
-            document.getElementById('status-text').textContent = msg.message || 'Finalizado';
-            // cerramos EventSource y escondemos overlay tras 1.5s
-            es.close();
-            setTimeout(hideOverlay, 1500);
-            alert(msg.message || 'Descarga completada');
-          } else if(msg.status === 'error'){
-            es.close();
-            document.getElementById('status-text').textContent = 'Error: ' + (msg.message || '');
-            alert('Error: ' + (msg.message || 'Error desconocido'));
-            setTimeout(hideOverlay, 2000);
+          const body = new URLSearchParams({url: videoUrl});
+          const res = await fetch(endpoint, { method: 'POST', body: body });
+    
+          if(!res.ok){
+            const err = await res.json().catch(()=>({error:'error'}));
+            alert('Error al iniciar: ' + (err.error || 'Status ' + res.status));
+            return;
           }
-        }catch(e){
-          console.error('parse error', e, evt.data);
+    
+          const data = await res.json();
+          const taskId = data.task_id;
+          showOverlay();
+    
+          // 👇 también con URL absoluta
+          const es = new EventSource(`${BACKEND_URL}/progress/` + taskId);
+    
+          es.onmessage = function(evt){
+            try{
+              const msg = JSON.parse(evt.data);
+              if(msg.status === 'downloading'){
+                setProgress(msg.percent || 0);
+                document.getElementById('status-text').textContent = `Descargando... ${msg.percent || 0}%`;
+              } else if(msg.status === 'started'){
+                document.getElementById('status-text').textContent = msg.message || 'Iniciando...';
+              } else if(msg.status === 'info'){
+                document.getElementById('status-text').textContent = msg.message || '';
+              } else if(msg.status === 'merging'){
+                setProgress(100);
+                document.getElementById('status-text').textContent = msg.message || 'Uniendo...';
+              } else if(msg.status === 'finished'){
+                setProgress(100);
+                document.getElementById('status-text').textContent = msg.message || 'Finalizado';
+                es.close();
+                setTimeout(hideOverlay, 1500);
+                alert(msg.message || 'Descarga completada');
+              } else if(msg.status === 'error'){
+                es.close();
+                document.getElementById('status-text').textContent = 'Error: ' + (msg.message || '');
+                alert('Error: ' + (msg.message || 'Error desconocido'));
+                setTimeout(hideOverlay, 2000);
+              }
+            }catch(e){
+              console.error('parse error', e, evt.data);
+            }
+          };
+    
+          es.onerror = function(e){
+            console.error('EventSource error', e);
+          };
+    
+        }catch(err){
+          console.error(err);
+          alert('Error iniciando descarga. Revisa la consola.');
         }
-      };
-
-      es.onerror = function(e){
-        console.error('EventSource error', e);
-        // no alert inmediato; seguirá intentando hasta finalizar
-      };
-
-    }catch(err){
-      console.error(err);
-      alert('Error iniciando descarga. Revisa la consola.');
     }
-  }
-
-  // prevenir reenvío de POST al recargar la página (simple)
-  if ( window.history.replaceState ) {
-    window.history.replaceState( null, null, window.location.href );
-  }
-
+    
+    // prevenir reenvío de POST al recargar
+    if (window.history.replaceState) {
+      window.history.replaceState(null, null, window.location.href);
+    }
+    
+    // efecto de escritura en el footer
     document.addEventListener("DOMContentLoaded", () => {
-    const el = document.getElementById("footer-phrase");
-    const text = el.textContent;
-    el.textContent = "";
-    let i = 0;
-
-    function typeWriter() {
+      const el = document.getElementById("footer-phrase");
+      const text = el.textContent;
+      el.textContent = "";
+      let i = 0;
+    
+      function typeWriter() {
         if (i < text.length) {
-        el.textContent += text.charAt(i);
-        i++;
-        setTimeout(typeWriter, 50);
+          el.textContent += text.charAt(i);
+          i++;
+          setTimeout(typeWriter, 50);
         }
-    }
-    typeWriter();
-     });
+      }
+      typeWriter();
+    });
+
 
   /* ANIMACION DE DESTELLOS ROJOS Y BLANCO RANDOM */
       const bg = document.querySelector(".background");
